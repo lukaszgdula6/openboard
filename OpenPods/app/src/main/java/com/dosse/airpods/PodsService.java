@@ -120,7 +120,7 @@ public class PodsService extends Service {
             if (prefs.getBoolean("batterySaver", false))
                 settings = new ScanSettings.Builder().setScanMode(0).setReportDelay(0).build();
             else
-                settings = new ScanSettings.Builder().setScanMode(2).setReportDelay(2).build();
+                settings = new ScanSettings.Builder().setScanMode(1).setReportDelay(2).build();
 
             btScanner.startScan(filters, settings, new ScanCallback() {
                 @Override
@@ -254,6 +254,9 @@ public class PodsService extends Service {
     private static boolean maybeConnected = false;
 
     private class NotificationThread extends Thread {
+        private int last_leftStatus = 15, last_rightStatus = 15, last_caseStatus = 15;
+        private boolean last_chargeL = false, last_chargeR = false, last_chargeCase = false;
+        private String last_model;
 
         private boolean isLocationEnabled () {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -286,6 +289,21 @@ public class PodsService extends Service {
             }
         }
 
+        private boolean nothingChanged() {
+            boolean result =  ((last_leftStatus == leftStatus) && (last_rightStatus == rightStatus) && (last_caseStatus == caseStatus)
+                    && (last_chargeL == chargeL) && (last_chargeR == chargeR) && (last_chargeCase == chargeCase)
+                    && (last_model.equals(model)));
+            if (!result) {
+                last_leftStatus = leftStatus;
+                last_rightStatus = rightStatus;
+                last_caseStatus = caseStatus;
+                last_chargeL = chargeL;
+                last_chargeR = chargeR;
+                last_chargeCase = chargeCase;
+                last_model = model;
+            }
+            return result;
+        }
         public void run () {
             boolean notificationShowing = false;
             String compat = getPackageManager().getInstallerPackageName(getPackageName());
@@ -300,6 +318,7 @@ public class PodsService extends Service {
             mBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
             for (; ; ) {
+
                 /*&&System.currentTimeMillis()-lastSeenConnected<TIMEOUT_CONNECTED*/
                 if (maybeConnected && !(leftStatus == 15 && rightStatus == 15 && caseStatus == 15)) {
                     if (!notificationShowing) {
@@ -390,8 +409,7 @@ public class PodsService extends Service {
 
                 if ((compat == null ? 0 : (compat.hashCode()) ^ 0x43700437) == 0x82e89606) return;
                 try {
-                    //noinspection BusyWait
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException ignored) {
                 }
             }
